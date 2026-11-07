@@ -438,9 +438,14 @@ async function vMine(root){
     const d=document.createElement('div');d.style.marginBottom='16px';
     d.innerHTML=`<div class="claimhead"><div><b>${esc(c.ref||'Expense claim')}</b> <span class="muted">· ${fmtDate(c.created)}</span></div><div>${statusPill(c.status)} <b>${gbp(claimTotal(c))}</b></div></div>
     ${c.status!=='Draft'?`<div class="track">${tracker(c)}</div>`:''}${itemRows(c)}
+    ${c.status==='Submitted'?`<div style="margin-top:8px"><button class="btn sec sm" data-wd>Withdraw to edit</button> <span class="muted">Only possible until finance acts on it.</span></div>`:''}
     ${c.status==='Draft'||c.status==='Rejected'?`<div style="margin-top:8px"><button class="btn sec sm" data-open>${c.status==='Draft'?'Continue editing':'Edit & resubmit'}</button> <button class="btn sec sm" data-rm>Delete</button></div>`:''}`;
     root.appendChild(d);wireFiles(d);
     const o=d.querySelector('[data-open]');if(o)o.onclick=()=>{draft=c;if(c.status==='Rejected')c.status='Draft';view='new';render()};
+    const w=d.querySelector('[data-wd]');if(w)w.onclick=async()=>{
+      if(!confirm('Withdraw this claim? It goes back to draft so you can edit it, and finance will no longer see it until you resubmit.'))return;
+      try{const n={...c,status:'Draft',history:[...(c.history||[]),{at:new Date().toISOString(),by:me.name,what:'Withdrawn by claimant'}]};delete n.submittedOn;await Store.save(n);Object.assign(c,n);delete c.submittedOn;draft=c;view='new';render()}
+      catch(e){alert('Could not withdraw – finance may already have acted on this claim. Refresh to see its latest status.')}};
     const r=d.querySelector('[data-rm]');if(r)r.onclick=async()=>{if(confirm('Delete this claim?')){await Store.remove(c.id);render()}};
   });
 }
